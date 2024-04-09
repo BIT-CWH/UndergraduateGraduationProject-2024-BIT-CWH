@@ -32,18 +32,12 @@ seL4_BootInfo 对 root task 描述了所有的 untyped capabilities，包括他�
 seL4 内核提供线程的抽象，用来管理任务的执行。线程在 seL4 中被表示为 Thread Control Block 对象（TCB）。
 
 TCB 中包含了如下对象：
-
-优先级和 maximum control priority。
-
-寄存器状态和上下文。
-
-CSpace capability。
-
-VSpace capability。
-
-endpoint capability 用于发送错误信息。
-
-reply capability 。
+- 优先级和 maximum control priority。
+- 寄存器状态和上下文。
+- CSpace capability。
+- VSpace capability。
+- endpoint capability 用于发送错误信息。
+- reply capability 。
 
 ## Scheduling model
 在 seL4 内核中，调度器是一个基于优先级的轮询调度器，会选取最高优先级的线程在特定的处理器核心上执行。
@@ -60,6 +54,4 @@ reply capability 。
 
 ## Domain scheduling
 
-In order to provide confidentiality seL4 provides a top-level hierarchical scheduler which provides static, cyclical scheduling of scheduling partitions known as domains.
-
-意思大概是 seL4 提供了一个静态的分层调度器，每一层称为一个 domain （域），用于隔离不相关的子系统。调度域划分是在编译期就静态确定好的，而且是不可抢占的。线程可以绑定在一个域上，只有它们绑定的域被是激活状态时，线程才会被调度。跨域的 IPC 回等到域切换时才会被响应，而 seL4_Yied 是无法跨域的。每个调度域有一个空闲线程，当调度域没有可以运行的线程时，就会运行空闲线程。
+seL4 提供了一个静态的分层调度器，每一层称为一个 domain （域），用于隔离不相关的子系统。调度域划分是在编译期就静态确定好的，而且是不可抢占的。线程可以绑定在一个域上，只有它们绑定的域被是激活状态时，线程才会被调度。跨域的 IPC 回等到域切换时才会被响应，而 seL4_Yied 是无法跨域的。每个调度域有一个空闲线程，当调度域没有可以运行的线程时，就会运行空闲线程。
