@@ -35,7 +35,6 @@ notification都是在接收端生成的，便于与tcb绑定
 2. 用户态启动异步系统调用
 3. 内核态在async_syscall_handler中处理系统调用
 
-
 # 其他
 ## AsyncArgs(用于client与server共享部分数据结构)
 1. req_ntfn：客户端向服务端发送信号，由服务端生成
@@ -45,3 +44,4 @@ notification都是在接收端生成的，便于与tcb绑定
 5. child_tcb：客户端tcb，由服务端创建客户线程时生成
 6. ipc_new_buffer：维护IPC请求和回复内容
 7. server_ready：供客户端查询服务端是否准备完成
+
