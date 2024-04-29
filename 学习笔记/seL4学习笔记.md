@@ -17,7 +17,10 @@ CNode 是一个内核对象，指向一个数组，数组里的元素是 Capabil
 一个 CNode 有 1 << CNodeSizeBits 个 Slot，一个 Slot 占 1 << seL4_SlotBits 字节。
 ## CSpace
 CSpace代表线程的Capability空间，包含进程的所有Capability，由一个或多个CNode组成。普遍情况下CSpace 只有一个 CNode。
-
+## CPtr类型
+- CPtr：普通CPtr，代表对于当前线程CNode的Capability偏移
+- LocalCPtr：对CPtr进行了一层封装，封装了一些系统调用方法
+- AbsoluteCPtr：代表对于特定CNode的Capability偏移
 # 内存
 ## 物理内存
 除了一小部分静态的内核内存，seL4 所有的物理内存都在用户态被管理。在启动时由 seL4 创建的对象的 Capability ，以及由 seL4 管理的其他的物理资源，在启动后都会传递给 root task。

@@ -1,4 +1,4 @@
-# 异步IPC代码路径
+# 异步IPC
 ## async_helper_thread(client)
 1. 获取AsyncArgs并等待AsyncArgs中某些参数就绪
 2. 生成recv_reply_coroutine
@@ -18,8 +18,16 @@
 7. 将sender_id设置到AsyncArgs中并设置服务器就绪标志
 ## 规律
 notification都是在接收端生成的，便于与tcb绑定
+## AsyncArgs(用于client与server共享部分数据结构)
+1. req_ntfn：客户端向服务端发送信号，由服务端生成
+2. reply_ntfn：服务端向客户端发送信号，由客户端生成
+3. server_sender_id：服务端注册自己为reply_notification的发送端，通过此id向客户端发送用户态中断
+4. client_sender_id：客户端注册自己为req_notification的发送端，通过此id向服务端发送用户态中断
+5. child_tcb：客户端tcb，由服务端创建客户线程时生成
+6. ipc_new_buffer：维护IPC请求和回复内容
+7. server_ready：供客户端查询服务端是否准备完成
 
-# 异步系统调用代码路径
+# 异步系统调用
 ## 用户态
 1. 生成reply_notification
 2. 生成recv_reply_coroutine
@@ -34,14 +42,141 @@ notification都是在接收端生成的，便于与tcb绑定
 1. 用户态注册异步系统调用
 2. 用户态启动异步系统调用
 3. 内核态在async_syscall_handler中处理系统调用
-
-# 其他
-## AsyncArgs(用于client与server共享部分数据结构)
-1. req_ntfn：客户端向服务端发送信号，由服务端生成
-2. reply_ntfn：服务端向客户端发送信号，由客户端生成
-3. server_sender_id：服务端注册自己为reply_notification的发送端，通过此id向客户端发送用户态中断
-4. client_sender_id：客户端注册自己为req_notification的发送端，通过此id向服务端发送用户态中断
-5. child_tcb：客户端tcb，由服务端创建客户线程时生成
-6. ipc_new_buffer：维护IPC请求和回复内容
-7. server_ready：供客户端查询服务端是否准备完成
-
+## 异步系统调用列表
+1. RISCVPageTableMap
+2. RISCVPageTableUnmap
+3. RISCVPageMap
+4. RISCVPageUnmap
+5. （已完成）RISCVPageGetAddress
+6. CNodeRevoke
+7. （待测试）CNodeDelete
+8. CNodeCancelBadgedSends
+9. （待测试）CNodeCopy
+10. （待测试）CNodeMint
+11. （待测试）CNodeMove
+12. （待测试）CNodeMutate
+13. CNodeRotate
+14. （待测试）UntypedRetype
+15. （已完成）TCBBindNotification
+16. （已完成）TCBUnbindNotification
+17. （已完成）Putchar
+18. （已完成）PutString
+## 异步系统调用接口设计文档
+- 异步系统调用类型依靠枚举变量AsyncMessageLabel区分，在进行异步系统调用时其保存在IPCItem中的msg_info中
+- 异步系统调用错误类型依靠枚举变量AsyncErrorLabel区分，在返回时其保存在IPCItem中的extend_msg[0]中
+### PutChar
+- 标签：AsyncMessageLabel::PutChar
+- 传入参数：
+  - extend_msg[0]：待输出的字符
+- 返回参数：
+  - extend_msg[0]：错误类型
+- 作用：在终端上输出一个字符
+### PutString
+- 标签：AsyncMessageLabel::PutString
+- 传入参数：
+  - extend_msg[0]：本次待输出的字符数量，记为n（0 ≤ n ≤ MAX_IPC_MSG_LEN - 1）
+  - extend_msg[1]-extend_msg[n]：本次待输出的字符
+- 返回参数：
+  - extend_msg[0]：错误类型
+- 作用：在终端上输出一串字符并换行
+### RISCVPageGetAddress
+- 标签：AsyncMessageLabel::RISCVGetAddress
+- 传入参数：
+  - extend_msg[0]：本次待查找的对象的capability地址（cptr）
+- 返回参数：
+  - extend_msg[0]：错误类型
+  - extend_msg[1]：本次待查找的对象页基地址48-63位
+  - extend_msg[2]：本次待查找的对象页基地址32-47位
+  - extend_msg[3]：本次待查找的对象页基地址16-31位
+  - extend_msg[4]：本次待查找的对象页基地址0-15位
+- 作用：获取某个对象的页基地址
+### TCBBindNotification
+- 标签：AsyncMessageLabel::TCBBindNotification
+- 传入参数：
+  - extend_msg[0]：待绑定Notification对象的TCB的CPtr
+  - extend_msg[1]：待绑定的Notification对象的CPtr
+- 返回参数：
+  - extend_msg[0]：错误类型
+- 作用：将TCB与Notification对象进行双向绑定
+### TCBUnbindNotification
+- 标签：AsyncMessageLabel::TCBUnbindNotification
+- 传入参数：
+  - extend_msg[0]：待解绑Notification对象的TCB的CPtr
+- 返回参数：
+  - extend_msg[0]：错误类型
+- 作用：将TCB与Notification对象解除双向绑定
+### UntypedRetype
+- 标签：AsyncMessageLabel::UntypedRetype
+- 传入参数：
+  - extend_msg[0]：service，待进行Retype的Untyped对象的CPtr
+  - extend_msg[1]：type，Retype后形成的目标类型
+  - extend_msg[2]：type_size，目标类型的大小，若目标类型定长则被忽略
+  - extend_msg[3]：root，待进行Retype的Untyped对象的CNode指针
+  - extend_msg[4]：node_index
+  - extend_msg[5]：node_depth
+  - extend_msg[6]：node_offset
+  - extend_msg[7]：num_objects，进行连续Retype的目标类型个数
+- 返回参数：
+  - extend_msg[0]：错误类型
+- 作用：将Untyped类型与按照参数定义进行Retype
+### CNodeDelete
+- 标签：AsyncMessageLabel::CNodeDelete
+- 传入参数：
+  - extend_msg[0]：service，待进行Delete操作的根CNode
+  - extend_msg[1]：node_index
+  - extend_msg[2]：node_depth
+- 返回参数：
+  - extend_msg[0]：错误类型
+- 作用：删除目标CNode下的特定Slot的Capability
+### CNodeCopy
+- 标签：AsyncMessageLabel::CNodeCopy
+- 传入参数：
+  - extend_msg[0]：dest_root_cptr，待进行Copy操作的目的slot的根CNode
+  - extend_msg[1]：dest_index
+  - extend_msg[2]：dest_depth
+  - extend_msg[3]：src_root_cptr，待进行Copy操作的源slot的根CNode
+  - extend_msg[4]：src_index
+  - extend_msg[5]：src_depth
+  - extend_msg[6]：cap_right
+- 返回参数：
+  - extend_msg[0]：错误类型
+- 作用：将源CNode下的特定Slot的Capability复制到目的CNode下的特定Slot
+### CNodeMint
+- 标签：AsyncMessageLabel::CNodeMint
+- 传入参数：
+  - extend_msg[0]：dest_root_cptr，待进行Copy操作的目的slot的根CNode
+  - extend_msg[1]：dest_index
+  - extend_msg[2]：dest_depth
+  - extend_msg[3]：src_root_cptr，待进行Copy操作的源slot的根CNode
+  - extend_msg[4]：src_index
+  - extend_msg[5]：src_depth
+  - extend_msg[6]：cap_right
+  - extend_msg[7]：badge
+- 返回参数：
+  - extend_msg[0]：错误类型
+- 作用：
+### CNodeMove
+- 标签：AsyncMessageLabel::CNodeMove
+- 传入参数：
+  - extend_msg[0]：dest_root_cptr，待进行Copy操作的目的slot的根CNode
+  - extend_msg[1]：dest_index
+  - extend_msg[2]：dest_depth
+  - extend_msg[3]：src_root_cptr，待进行Copy操作的源slot的根CNode
+  - extend_msg[4]：src_index
+  - extend_msg[5]：src_depth
+- 返回参数：
+  - extend_msg[0]：错误类型
+- 作用：
+### CNodeMutate
+- 标签：AsyncMessageLabel::CNodeMutate
+- 传入参数：
+  - extend_msg[0]：dest_root_cptr，待进行Copy操作的目的slot的根CNode
+  - extend_msg[1]：dest_index
+  - extend_msg[2]：dest_depth
+  - extend_msg[3]：src_root_cptr，待进行Copy操作的源slot的根CNode
+  - extend_msg[4]：src_index
+  - extend_msg[5]：src_depth
+  - extend_msg[6]：cap_data
+- 返回参数：
+  - extend_msg[0]：错误类型
+- 作用：
