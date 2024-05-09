@@ -43,10 +43,10 @@ notification都是在接收端生成的，便于与tcb绑定
 2. 用户态启动异步系统调用
 3. 内核态在async_syscall_handler中处理系统调用
 ## 异步系统调用列表
-1. （待测试）RISCVPageTableMap
-2. RISCVPageTableUnmap
-3. RISCVPageMap
-4. RISCVPageUnmap
+1. （已完成）RISCVPageTableMap
+2. （待测试）RISCVPageTableUnmap
+3. （已完成）RISCVPageMap
+4. （已完成）RISCVPageUnmap
 5. （已完成）RISCVPageGetAddress
 6. （待测试）CNodeRevoke
 7. （待测试）CNodeDelete
@@ -56,10 +56,10 @@ notification都是在接收端生成的，便于与tcb绑定
 11. （待测试）CNodeMove
 12. （待测试）CNodeMutate
 13. （参数个数过多）CNodeRotate
-14. （待测试）UntypedRetype
+14. （已完成）UntypedRetype
 15. （已完成）TCBBindNotification
 16. （已完成）TCBUnbindNotification
-17. （已完成）Putchar
+17. （已完成）PutChar
 18. （已完成）PutString
 ## 异步系统调用接口设计文档
 - 异步系统调用类型依靠枚举变量AsyncMessageLabel区分，在进行异步系统调用时其保存在IPCItem中的msg_info中
@@ -180,3 +180,43 @@ notification都是在接收端生成的，便于与tcb绑定
 - 返回参数：
   - extend_msg[0]：错误类型
 - 作用：
+### RISCVPageTableMap
+- 标签：AsyncMessageLabel::RISCVPageTableMap
+- 传入参数：
+  - extend_msg[0]：service_cptr，待进行映射的PageTable的cptr（二级页表）
+  - extend_msg[1]：vspace_cptr，待被映射到的vspace（一级页表）的cptr
+  - extend_msg[2]：vaddr，虚拟地址
+  - extend_msg[3]：attrs，映射属性
+- 返回参数：
+  - extend_msg[0]：错误类型
+- 作用：将新生成的PageTable映射到线程的虚拟空间VSpace（一级页表）中
+### RISCVPageTableUnmap
+- 标签：AsyncMessageLabel::RISCVPageTableUnmap
+- 传入参数：
+  - extend_msg[0]：service_cptr，待进行解除映射的PageTable（二级页表）的cptr
+- 返回参数：
+  - extend_msg[0]：错误类型
+- 作用：将某个PageTable从线程的虚拟空间VSpace（一级页表）中解除映射
+### RISCVPageMap
+- 标签：AsyncMessageLabel::RISCVPageMap
+- 传入参数：
+  - extend_msg[0]：service_cptr，待进行映射的Frame的cptr
+  - extend_msg[1]：page_table_cptr，待被映射到的VSpace的cptr
+  - extend_msg[2]：vaddr，虚拟地址
+  - extend_msg[3]：rights，映射权限
+  - extend_msg[4]：attrs，映射属性
+- 返回参数：
+  - extend_msg[0]：错误类型
+- 作用：将新生成的页帧Frame映射到线程的虚拟空间的某个PageTable（二级页表）中
+### RISCVPageUnmap
+- 标签：AsyncMessageLabel::RISCVPageUnmap
+- 传入参数：
+  - extend_msg[0]：service_cptr，待进行解除映射的Frame的cptr
+- 返回参数：
+  - extend_msg[0]：错误类型
+- 作用：将某个页帧Frame映射从线程的虚拟空间的某个PageTable（二级页表）中解除映射
+
+
+
+
+
